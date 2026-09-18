@@ -106,9 +106,9 @@ never on the host.
 
 13. **Review** - Quick self-review for logic errors, unnecessary complexity and consistency with existing patterns. For anything touching containers or the pipeline, also confirm no secret was committed or baked into an image.
 
-14. **Update README** - Invoke `/update-readme`. It derives its entry from the commits since the README was last touched, so run it after the merge.
+14. **Update README** - Invoke `/update-readme`. It derives its entry from the commits since the README was last touched, so run it after the merge. It also reads the Goals and Notes in @context/current-feature.md, so write the README first — but stop before its commit step. The commit happens in step 15.
 
-15. **Close out** - Update @context/current-feature.md: set Status to "Completed", clear Goals/Notes, and append a one-line summary to History that includes the deployed SHA. Then state which spec is next and stop.
+15. **Close out** - Every finished feature ends here; never skip it. Update @context/current-feature.md: set Status to "Completed", clear Goals/Notes, and append a one-line summary to History that includes the deployed SHA (for specs with no deploy yet, the merge SHA and "not deployed"). Then ask for permission and invoke `/commit-msg` to commit `README.md` and `context/current-feature.md` together in one `docs:` commit, and push `main`. Then state which spec is next and stop.
 
 ## Rules
 
@@ -119,4 +119,5 @@ never on the host.
 - Do not write code-level explanations, tutorials or "what this teaches you" sections. Report what changed, what was checked, and any non-obvious decision — nothing more. The user reads the code themselves.
 - Do not run app commands on the host. If a container is not running, bring it up; do not work around it with a local install.
 - One run of this skill is one spec. Do not start the next one automatically.
+- A cycle is not finished until @context/current-feature.md is closed out and committed with the README.
 - Both delivery pauses are reports plus a stop. Do not merge straight through from a green pipeline, and do not close out straight from a successful deploy.
