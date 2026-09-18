@@ -124,18 +124,30 @@ flowchart LR
 
 ## Getting Started
 
-Not runnable yet — `docker compose up --build` arrives with feature 01, and this
-section gains the real commands as each container lands.
-
 Prerequisites: Docker and Docker Compose.
 
 ```bash
 cp .env.example .env
+docker compose up --build -d
+curl http://localhost:4000/api/health
 ```
 
 The app runs only in containers: `docker compose up` starts it, and tests, lint,
 format and build run through `docker compose exec`. There is no root
 `package.json` and no host-level npm workflow.
+
+Backend checks, run in the running `backend` container:
+
+```bash
+docker compose exec backend npm test
+docker compose exec backend npm run lint          # type-check, then ESLint
+docker compose exec backend npm run format:check
+docker compose exec backend npm run build
+```
+
+Source edits restart the backend without a rebuild. After a dependency change,
+rebuild and replace the `node_modules` volume:
+`docker compose up --build -d --renew-anon-volumes`.
 
 ## Environment Variables
 

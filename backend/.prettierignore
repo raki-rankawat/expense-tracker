@@ -1,0 +1,7 @@
+# Prettier reads .prettierignore from the directory it runs in, so the root one
+# does not apply when the scripts run here. Formatting options still come from
+# the root .prettierrc.
+
+dist/
+coverage/
+package-lock.json
