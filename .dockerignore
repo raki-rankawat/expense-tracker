@@ -1,0 +1,18 @@
+# Keeps the build context small and free of secrets when the repository root is
+# used as a context. frontend/ and backend/ carry their own .dockerignore.
+
+**/node_modules
+**/dist
+**/build
+**/coverage
+
+**/.env
+**/.env.*
+
+**/*.log
+
+.git
+.github
+.claude
+context
+plan
