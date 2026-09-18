@@ -5,12 +5,12 @@ lifecycle: Docker, Compose, CI/CD, a container registry and deployment to Render
 
 ## Status
 
-**1 of 12 complete.**
+**2 of 12 complete.**
 
 | #   | Feature                                | Status         | Deployed SHA |
 | --- | -------------------------------------- | -------------- | ------------ |
 | 00  | Repository & Tooling Setup             | ✅ Done        | —            |
-| 01  | Backend in Docker                      | ⬜ Not started |              |
+| 01  | Backend in Docker                      | ✅ Done        | —            |
 | 02  | MongoDB Service & Expense Model        | ⬜ Not started |              |
 | 03  | Frontend in Docker                     | ⬜ Not started |              |
 | 04  | GitHub Actions CI                      | ⬜ Not started |              |
@@ -67,14 +67,15 @@ flowchart TD
 
     classDef done fill:#2da44e,stroke:#1a7f37,color:#ffffff
     classDef todo fill:#eaeef2,stroke:#d0d7de,color:#57606a
-    class F00 done
-    class F01,F02,F03,F04,F05,F06,F07,F08,F09,F10,F11 todo
+    class F00,F01 done
+    class F02,F03,F04,F05,F06,F07,F08,F09,F10,F11 todo
 ```
 
 ## Architecture
 
-The target design from `context/architecture.md`. Nothing runs yet — the
-containers arrive in features 01-03.
+The target design from `context/architecture.md`. The backend container runs
+from feature 01; `mongo` and `frontend` arrive in features 02 and 03 (grey
+below).
 
 Runtime flow:
 
@@ -100,6 +101,11 @@ flowchart LR
     HOST -->|"BACKEND_PORT (4000)"| BE
     FE -->|"/api proxy → backend:BACKEND_PORT"| BE
     BE -->|"MONGODB_URI → mongo:27017"| MONGO
+
+    classDef done fill:#2da44e,stroke:#1a7f37,color:#ffffff
+    classDef todo fill:#eaeef2,stroke:#d0d7de,color:#57606a
+    class BE done
+    class FE,MONGO todo
 ```
 
 ## Deployment Pipeline
@@ -158,7 +164,7 @@ Render's environment configuration.
 | Variable        | Purpose                                    | Local (Compose `.env`)                         | Production (Render)                       |
 | --------------- | ------------------------------------------ | ---------------------------------------------- | ----------------------------------------- |
 | `NODE_ENV`      | Runtime mode for both apps                 | `development`                                  | `production`, set in Render (feature 06)  |
-| `BACKEND_PORT`  | Port the backend (Express) is published on | `4000`                                         | Render environment (feature 06)           |
+| `BACKEND_PORT`  | Port the backend (Express) is published on | `4000`; Compose passes it to the app as `PORT` | Render environment (feature 06)           |
 | `FRONTEND_PORT` | Port the frontend (Vite dev server) is on  | `5173`                                         | Render environment (feature 06)           |
 | `MONGO_PORT`    | Port MongoDB listens on in the Compose net | `27017`, not published to the host             | Not used — separate database (feature 06) |
 | `MONGODB_URI`   | Connection string the backend uses         | Points at the `mongo` service, never localhost | Separate production database (feature 06) |
@@ -177,13 +183,17 @@ Render's environment configuration.
 ```text
 expense-tracker/
 ├── frontend/          # React app — empty until feature 03
-├── backend/           # Express API — empty until feature 01
+├── backend/           # Express API
+│   ├── src/           # app.ts, server.ts, routes/, middleware/; tests beside the code
+│   ├── Dockerfile     # dev (tsx watcher) and prod (compiled output) targets
+│   └── .dockerignore
 ├── .github/           # CI workflows — empty until feature 04
 ├── context/           # project docs; features/ holds one spec per cycle
 ├── plan/              # early planning drafts
 ├── .claude/skills/    # workflow skills (implement-feature, commit-msg, ...)
+├── docker-compose.yml # local development: the backend service
 ├── .env.example       # committed list of environment variables
-├── .nvmrc             # the pinned Node version, the only place it appears
+├── .nvmrc             # the pinned Node version; the Dockerfile repeats it as ARG NODE_VERSION
 ├── .prettierrc        # shared formatting, with .prettierignore
 ├── .editorconfig
 ├── .gitattributes     # LF line endings on every OS
@@ -253,3 +263,25 @@ is no root `package.json`: `docker compose` is the entry point.
 **Fixes** — `prettier --check .` failed on four committed docs (table alignment
 only); `.claude/`, `context/` and `plan/` are now in `.prettierignore` as
 hand-written docs.
+
+### 01 — Backend in Docker
+
+`99ce913` · merged in `8c63009` (PR #2)
+
+**Shipped** — Express 5 + TypeScript backend with `GET /api/health` and one
+`{ "error": "<message>" }` error handler; `backend/Dockerfile` with `dev` (tsx
+watcher) and `prod` (compiled output and production dependencies only)
+targets; `docker-compose.yml` with the `backend` service; a Jest + Supertest
+health test run with `docker compose exec backend npm test`.
+
+**Decisions** — TypeScript is pinned `~6.0.3`: typescript-eslint and ts-jest do
+not support 7 yet. `FROM` cannot read `.nvmrc`, so the Dockerfile repeats the
+Node version as `ARG NODE_VERSION`. The root `.prettierrc` is mounted read-only
+into the container so Prettier finds it above `/app`.
+
+**Fixes** — Hot reload did not fire: file-change events from the Windows host
+do not reach the container, so the watcher polls (`CHOKIDAR_USEPOLLING`).
+ts-jest warned that `module: nodenext` needs `isolatedModules`; with it set,
+ts-jest only transpiles, so `lint` runs `tsc --noEmit` to type-check tests. The
+spec's `docker compose build --target prod` does not exist in Compose; the prod
+image was verified with `docker build --target prod ./backend`.
