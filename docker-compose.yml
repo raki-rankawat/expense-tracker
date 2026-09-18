@@ -1,0 +1,24 @@
+# Local development only. Production runs the Dockerfiles' prod targets on
+# Render, configured separately.
+
+services:
+  backend:
+    build:
+      context: ./backend
+      target: dev
+    env_file: .env
+    environment:
+      PORT: ${BACKEND_PORT}
+      # File-change events from a Windows host do not reach a Linux container
+      # through a bind mount, so the tsx watcher polls instead
+      CHOKIDAR_USEPOLLING: 'true'
+    ports:
+      - '${BACKEND_PORT}:${BACKEND_PORT}'
+    volumes:
+      # Source from the host, so an edit restarts the server without a rebuild
+      - ./backend:/app
+      # Keeps the image's node_modules from being hidden by the bind mount above
+      - /app/node_modules
+      # The shared Prettier config sits above backend/; Prettier looks for it
+      # in parent directories, so it goes in the container's parent of /app
+      - ./.prettierrc:/.prettierrc:ro
